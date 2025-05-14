@@ -81,3 +81,20 @@ out.release()
 | Собрать весь конвейер в единый класс                             | Объединить детекцию, трекинг, кластеризацию и аннотации | `src/futai/processor.py` (`TeamVideoProcessor`) |
 | Запустить обработку одного кадра в Colab                         | Вызов `processor.process_next()` и `sv.plot_image`     | Ноутбук `notebooks/demo.ipynb`               |
 | Прогнать всё видео и сохранить результат                         | OpenCV `VideoWriter` + цикл по `process_next()`        | Пример в Colab-ячейке «Process Full Video»   |
+
+| Что происходит на каждом шаге?                                   | Какая библиотека или логика используется                | Где это реализовано в проекте               |
+|------------------------------------------------------------------|----------------------------------------------------------|---------------------------------------------|
+| Загружаем обученную модель для поиска объектов                   | YOLOv8 от Ultralytics                                    | `PlayerDetectionModel` в `detection.py`     |
+| Читаем видео по кадрам                                           | `supervision.get_video_frames_generator()`              | в `TeamVideoProcessor` (`processor.py`)     |
+| Детектируем игроков, мяч, вратарей и судей на кадре              | YOLO `model(frame)` → `sv.Detections(...)`               | `infer()` в `detection.py`                  |
+| Убираем лишние объекты, накладываем NMS                          | `with_nms()` — убирает дублирующие боксы                | в `process_next()`                          |
+| Объединяем одних и тех же игроков в разных кадрах                | ByteTrack трекинг по координатам и размерам              | `tracker.update_with_detections()`          |
+| Вырезаем изображения игроков из кадров                           | `sv.crop_image()`                                        | `TeamClassifier.extract_features()`         |
+| Переводим картинки игроков в векторы                             | SigLIP (нейросеть) → UMAP → KMeans                      | `TeamClassifier` в `classification.py`      |
+| Классифицируем игроков по командам без учителя                   | Кластеризация (2 кластера)                              | `TeamClassifier.predict()`                  |
+| Назначаем вратарей к ближайшей команде                           | Эвристика — сравнение расстояний до центров масс игроков | `resolve_goalkeepers_team_id()` в `utils.py` |
+| Корректируем классы судей (нормализуем)                          | `class_id -= 1`                                          | `process_next()`                            |
+| Собираем все объекты обратно                                     | `sv.Detections.merge([...])`                            | `process_next()`                            |
+| Рисуем аннотации поверх кадра                                    | `EllipseAnnotator`, `LabelAnnotator`, `TriangleAnnotator` | `annotation.py`                             |
+| Возвращаем оригинальный и размеченный кадр                       | tuple (original, annotated)                             | `process_next()` в `processor.py`           |
+| Сохраняем кадры в видео файл                                     | `cv2.VideoWriter(...).write(frame)`                     | В Colab-ноутбуке (финальный цикл записи)    |

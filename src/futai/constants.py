@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""Все строковые и числовые «магические» литералы в одном месте."""
+"""Все строковые и числовые MaGiC литералы в одном месте."""
 
 # ================================
 #  Detection settings
@@ -11,7 +9,7 @@ DEFAULT_CONFIDENCE_THRESHOLD: float = 0.3
 # ================================
 #  SigLIP + clustering
 # ================================
-# Название (или путь) до предобученной SigLIP-модели в HF Hub
+# Ппуть до предобученной SigLIP-модели в HF Hub
 SIGLIP_MODEL_NAME: str = 'google/siglip-base-patch16-224'
 # Количество компонент для UMAP
 UMAP_N_COMPONENTS: int = 3

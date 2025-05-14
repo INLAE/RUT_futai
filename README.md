@@ -69,4 +69,15 @@ while True:
 out.release()
 
 ```
-
+| Что надо сделать?                                                | Какая библиотека или логика используется               | Пример расположения                          |
+|------------------------------------------------------------------|--------------------------------------------------------|----------------------------------------------|
+| Установить все зависимости                                       | `pip install -r requirements.txt`                      | `requirements.txt`, `setup.py`               |
+| Загрузить и подготовить модель детекции                          | YOLOv8 (Ultralytics)                                   | `src/futai/detection.py`                     |
+| Найти объекты на каждом кадре                                    | метод `infer(frame)`                                   | `PlayerDetectionModel.infer`                 |
+| Сквозной трекинг объектов                                        | ByteTrack (Supervision)                                | `src/futai/tracking.py`                      |
+| Разделить игроков на две команды                                 | SigLIP → UMAP → KMeans (unsupervised clustering)       | `src/futai/classification.py`                |
+| Зафиксировать команду вратаря                                    | Простейшая эвристика по центроидам игроков             | `src/futai/utils.py`                         |
+| Нарисовать боксы, подписи и фигуры над мячом                     | `EllipseAnnotator`, `LabelAnnotator`, `TriangleAnnotator` (Supervision) | `src/futai/annotation.py`       |
+| Собрать весь конвейер в единый класс                             | Объединить детекцию, трекинг, кластеризацию и аннотации | `src/futai/processor.py` (`TeamVideoProcessor`) |
+| Запустить обработку одного кадра в Colab                         | Вызов `processor.process_next()` и `sv.plot_image`     | Ноутбук `notebooks/demo.ipynb`               |
+| Прогнать всё видео и сохранить результат                         | OpenCV `VideoWriter` + цикл по `process_next()`        | Пример в Colab-ячейке «Process Full Video»   |

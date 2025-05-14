@@ -5,6 +5,7 @@
 """
 
 import supervision as sv
+from typing import Any, Dict
 
 from .constants import (
     COLOR_PALETTE_HEX,
@@ -15,7 +16,7 @@ from .constants import (
     TEXT_COLOR_HEX
 )
 
-def build_annotators() -> dict[str, sv.Annotator]:
+def build_annotators() -> Dict[str, Any]:
     """
     Возвращает словарь из трёх Annotator-ов:
       - ellipse     (игроки)

@@ -6,7 +6,7 @@ import supervision as sv
 
 class Tracker:
     """
-    Обёртка вокруг sv.ByteTrack — даёт метод update().
+    Обёртка вокруг sv.ByteTrack — добавлю update()
     """
 
     def __init__(self):
@@ -14,12 +14,12 @@ class Tracker:
         self.reset()
 
     def reset(self) -> None:
-        """Сброс internal state трекера."""
+        #Сброс internal state трекера."""
         self._tracker.reset()
 
     def update(self, detections: sv.Detections) -> sv.Detections:
         """
         Применить трекинг к входным детекциям.
-        Возвращает Detections с полем tracker_id.
+        Возвращает метку с полем tracker_id.
         """
         return self._tracker.update_with_detections(detections=detections)

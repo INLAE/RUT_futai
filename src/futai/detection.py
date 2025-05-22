@@ -14,11 +14,6 @@ class PlayerDetectionModel:
     """
 
     def __init__(self, weights_path: str, device: str = None):
-        """
-        Args:
-            weights_path: путь к файлу весов .pt
-            device: 'cpu' или 'cuda'; если None — YOLO выберет сам.
-        """
         self.model = YOLO(weights_path)
         if device:
             self.model.to(device)

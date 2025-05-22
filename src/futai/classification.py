@@ -21,7 +21,7 @@ from .constants import (
 class TeamClassifier:
     """
     Unsupervised team classifier.
-    Экстракт эмбеддингов SigLIP → UMAP (n_components=...) → KMeans (n_clusters=2).
+    Экстракт эмбеддингов SigLIP -> UMAP (n_components=...) -> KMeans (n_clusters=2).
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class TeamClassifier:
 
     def extract_features(self, crops: list[np.ndarray]) -> np.ndarray:
         """
-        Конвертация списка кропов (OpenCV→PIL) → эмбеддинги.
+        Конвертация списка кропов (OpenCV -> PIL) -> эмбеддинги.
         """
         pil_imgs = [sv.cv2_to_pillow(c) for c in crops]
         batches = [
@@ -68,17 +68,17 @@ class TeamClassifier:
     def fit(self, crops: list[np.ndarray]) -> None:
         """
         Fit UMAP + KMeans по списку кропов.
-        Сохраняет raw_data, чтобы transform() работал без ошибок.
+        Сохраняет raw_data, чтобы transform работал без ошибо
         """
         data = self.extract_features(crops)
         projections = self.reducer.fit_transform(data)
-        # сохраняем, иначе transform() упадёт, если fit был на единственном sample
+        # сохраняем, иначе transform() упадет, ежели fit был на единственном sample
         self.reducer._raw_data = data
         self.cluster_model.fit(projections)
 
     def predict(self, crops: list[np.ndarray]) -> np.ndarray:
         """
-        Предсказание team_id для новых кропов.
+        Предсказание team_id для новых кропов
         """
         if not crops:
             return np.array([], dtype=int)

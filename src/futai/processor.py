@@ -20,32 +20,32 @@ from .constants      import (
 
 class TeamVideoProcessor:
     """
-    Pipeline:
-      1) Детекция (YOLO)
-      2) Трекинг (ByteTrack)
-      3) Классификация команд (SigLIP→UMAP→KMeans)
-      4) Assign GK once
+    Пайп:
+      1) Детекция на YOLO
+      2) Трекинг за ByteTrack
+      3) Классификация команд SigLIP -> UMAP -> KMeans
+      4) Assign GK once - эвристика закрепить первое ближайшее окружение
       5) Аннотации (ellipse, label, triangle)
     """
 
     def __init__(
         self,
         weights_path: str,
-        video_path:   str,
-        device:       str = None,
-        confidence:   float = DEFAULT_CONFIDENCE_THRESHOLD
+        video_path: str,
+        device: str = None,
+        confidence: float = DEFAULT_CONFIDENCE_THRESHOLD
     ):
         # Детектор + трекер + классификатор
-        self.detector      = PlayerDetectionModel(weights_path, device)
-        self.tracker       = Tracker()
-        self.team_clf      = TeamClassifier(device=device)
+        self.detector = PlayerDetectionModel(weights_path, device)
+        self.tracker = Tracker()
+        self.team_clf = TeamClassifier(device=device)
         # Генератор фреймов
-        self.frame_gen     = sv.get_video_frames_generator(video_path)
-        self.confidence    = confidence
-        # Мапа GK tracker_id → команда (0/1)
-        self.gk_team_map   : dict[int,int] = {}
+        self.frame_gen = sv.get_video_frames_generator(video_path)
+        self.confidence = confidence
+        # Мапа GK tracker_id -> команда (0/1)
+        self.gk_team_map : dict[int,int] = {}
         # Annotators
-        self.annotators    = build_annotators()
+        self.annotators = build_annotators()
 
     def process_next(self) -> tuple[np.ndarray, np.ndarray]:
         """

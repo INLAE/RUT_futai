@@ -16,10 +16,10 @@ from .constants import (
 
 def build_annotators() -> Dict[str, Any]:
     """
-    Возвращает словарь из трёх Annotator-ов:
+    Возвращает словарь из 3-х Annotator:
       - ellipse     (игроки)
       - label       (текст с tracker_id)
-      - triangle    (мяч)
+      - triangle     (мяч)
     """
     palette = sv.ColorPalette.from_hex(COLOR_PALETTE_HEX)
 

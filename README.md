@@ -1,89 +1,105 @@
-# Here We Go
-# RUT-FUT Video Tracker
+# RUT-FUT-AI — трекинг футболистов, радар и диаграммы Вороного
 
-Инструмент для детекции, трекинга и классификации команд на спортивном видео с помощью:
-- **YOLOv8** (детекция)
-- **ByteTrack** (трекинг)
-- **SigLIP → UMAP → KMeans** (кластеризация команд)
-- **Supervision** (аннотации)
+**RUT-FUT-AI** — мой дипломный репозиторий, позволяющий из одного или нескольких видео-кадров получить:
 
-## Установка
+* детектированные и отслеживаемые объекты  
+  (мяч / игроки / вратари / судья) с идентификаторами трека;
+* автоматическое разбиение игроков на 2 команды без разметки;
+* радар — упрощенный план поля сверху, как в игре FIFA;
+* контрольные зоны команд (Диаграмма Воронного) поверх радара;
+* два готовых видеофайла: *detect_out.mp4* (кадр + боксы) и *radars_out.mp4*.
+
+Библиотеки: **Ultralytics YOLOv8 + Supervision + SigLIP + UMAP + scikit-learn**.  
+Код разбит на небольшие, независимые модули (см. `src/futai/*`).
+
+---
+
+## 1. Установка
 
 ```bash
-git clone git@github.com:INLAE/RUT_futai.git
-cd RUT_futai
-pip install -e .
+git clone https://github.com/your-name/rut-fut-ai.git
+cd rut-fut-ai
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
-## Быстрый старт в Colab
+
+> [!IMPORTANT]  
+> YOLO и SigLIP по-умолчанию используют GPU. Если запускаете на CPU, измените DEFAULT_DEVICE в src/futai/constants.py.
+
+## 2. Структура проекта
+````
+src/futai
+├── detector/        YOLO детекция и ByteTrack
+├── handmodel/       классификатор команд (SigLIP > UMAP > KMeans)
+├── pitch/           геометрия поля + функции рисования
+├── utils/           утилиты (назначение GK к команде и тд)
+└── visualizer/      вывод кадра / радара / диаграммы Воронного
+````
+## 3. Использование
 ```python
-from google.colab import drive
-drive.mount('/content/drive')
-
-WEIGHTS   = '/content/drive/MyDrive/WEIGHTS/best.pt'
-VIDEO_IN  = '/content/drive/MyDrive/VIDEO/video.mp4'
-VIDEO_OUT = '/content/annotated.mp4'
-
-from futai.processor import TeamVideoProcessor
+from pathlib import Path
 import supervision as sv
+import cv2, numpy as np
 
-processor = TeamVideoProcessor(
-    weights_path=WEIGHTS,
-    video_path=VIDEO_IN,
-    device='cuda',
-    confidence=0.3
+# 1. Пути к данным
+VIDEO_IN Path("/content/CSKA.mp4") # исходное видео
+PLAYER_WEIGHTS = Path("/content/weights/players.pt") # YOLO модель игроков
+FIELD_WEIGHTS = Path("/content/weights/field.pt") # YOLO модель линий поля
+
+# 2. Инициализация пайплайна
+from futai.detector.detection import PlayerDetectionModel
+from futai.handmodel.classification import TeamClassifier
+from futai.detector.tracking import Tracker
+from futai.utils.gk_resolver import GoalkeeperResolver as GK
+from futai.pitch.config import SoccerPitchConfiguration as SPC
+from futai.pitch.pitch_projector import PitchProjector
+from futai.visualizer.visualizer import Visualizer
+from futai.detector.annotation import build_annotators
+
+player_det = PlayerDetectionModel(str(PLAYER_WEIGHTS))
+team_clf = TeamClassifier()
+tracker = Tracker()
+pitch_proj = PitchProjector(
+    field_model = PlayerDetectionModel(str(FIELD_WEIGHTS))
+)  # использует тот же YOLO-wrapper
+vis = Visualizer(**build_annotators())
+
+# 3. Читаем видео
+cap = cv2.VideoCapture(str(VIDEO_IN))
+ret, frame = cap.read()    # <— для примера возьмём первый кадр
+
+# 4. Шаги конвейера
+## 4-A. детекция + трекинг
+ball_det, other_det = player_det.infer(frame).split_ball_and_others(tracker)
+
+## 4-B. классификация команд
+crops = [sv.crop_image(frame, xy) for xy in other_det.players.xyxy]
+other_det.players.class_id = team_clf.predict(crops)
+other_det.goalkeepers.class_id = GK.resolve(other_det.players,
+                                            other_det.goalkeepers)
+
+## 4-C. аннотированный кадр
+vis.frame(frame, ball_det, other_det.all)
+
+## 4-D. проекция на птичий взгляд
+proj = pitch_proj.project(
+    frame,
+    {
+        "ball"  : ball_det.bottom_center(),
+        "player": other_det.all.bottom_center(),
+    }
 )
+ball_xy_p   = proj["ball"]
+player_xy_p = proj["player"]
+team_flag   = other_det.all.class_id
 
-# Пример одного кадра
-frame, annotated = processor.process_next()
-sv.plot_image(annotated)
+## 4-E. рисуем радар и диаграмму Воронного
+vis.radar(ball_xy_p, player_xy_p, team_flag)
+vis.voronoi_blend(player_xy_p, team_flag, opacity=0.45)
 ```
 
-## Полный прогон и сохранение
-```python
-
-import cv2
-
-# Настройка VideoWriter
-cap = cv2.VideoCapture(VIDEO_IN)
-fps = cap.get(cv2.CAP_PROP_FPS)
-w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-cap.release()
-
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out    = cv2.VideoWriter(VIDEO_OUT, fourcc, fps, (w, h))
-
-# Сброс состояния
-import supervision as sv
-processor.frame_gen = sv.get_video_frames_generator(VIDEO_IN)
-processor.tracker.reset()
-
-# Обработка
-while True:
-    try:
-        _, ann = processor.process_next()
-    except StopIteration:
-        break
-    out.write(ann)
-
-out.release()
-
-
-```
-## Важнецкая таблица для дебага и отладки
-| Процесс                                            | Логика процесса                                           | Где найти в проекте?                         |
-|----------------------------------------------------|-----------------------------------------------------------|----------------------------------------------|
-| Загружаем обученную модель для поиска объектов     | import YOLOv8                                             | `PlayerDetectionModel` в `detection.py`      |
-| Читаем видео по кадрам                             | `supervision.get_video_frames_generator()`                | в `TeamVideoProcessor` (`processor.py`)      |
-| Детектируем игроков, мяч, вратарей и судей на кадре | YOLO `model(frame)` → `sv.Detections(...)`                | `infer()` в `detection.py`                   |
-| Убираем лишние объекты, накладываем NMS            | `with_nms()` — убирает дублирующие боксы                  | в `process_next()`                           |
-| Объединяем одних и тех же игроков в разных кадрах  | ByteTrack трекинг по координатам и размерам               | `tracker.update_with_detections()`           |
-| Вырезаем изображения игроков из кадров             | `sv.crop_image()`                                         | `TeamClassifier.extract_features()`          |
-| Переводим картинки игроков в векторы               | SigLIP (нейросеть) → UMAP → KMeans                        | `TeamClassifier` в `classification.py`       |
-| Классифицируем игроков по командам без учителя     | Кластеризация (2 кластера)                                | `TeamClassifier.predict()`                   |
-| Назначаем вратарей к ближайшей команде             | Эвристика — сравнение расстояний до центров масс игроков  | `resolve_goalkeepers_team_id()` в `utils.py` |
-| Корректируем классы судей (нормализуем)            | `class_id -= 1`                                           | `process_next()`                             |
-| Собираем все объекты обратно                       | `sv.Detections.merge([...])`                              | `process_next()`                             |
-| Рисуем аннотации поверх кадра                      | `EllipseAnnotator`, `LabelAnnotator`, `TriangleAnnotator` | `annotation.py`                              |
-| Возвращаем оригинальный и размеченный кадр         | tuple (original, annotated)                               | `process_next()` в `processor.py`            |
-| Сохраняем кадры в видео файл                       | `cv2.VideoWriter(...).write(frame)`                       | В Colab-ноутбуке (финальный цикл записи)     |
+> [!NOTE]
+> Классификация команд полностью unsupervised — SigLIP + UMAP + KMeans.
+При смене формы достаточно 50–100 кадров для ре-фита.
+> Модуль pitch не зависит от ML — его можно использовать отдельно
+для любых визуализаций на плоскости поля.

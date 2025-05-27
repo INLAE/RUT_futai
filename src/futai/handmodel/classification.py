@@ -10,7 +10,7 @@ from tqdm import tqdm
 from transformers import AutoProcessor, SiglipVisionModel
 import supervision as sv
 
-from .constants import (
+from src.futai.constants import (
     SIGLIP_MODEL_NAME,
     UMAP_N_COMPONENTS,
     KMEANS_N_CLUSTERS,
@@ -18,16 +18,17 @@ from .constants import (
     DEFAULT_BATCH_SIZE
 )
 
+
 class TeamClassifier:
     """
     Unsupervised team classifier.
-    Экстракт эмбеддингов SigLIP -> UMAP (n_components=...) -> KMeans (n_clusters=2).
+    Экстракт эмбеддингов SigLIP -> UMAP (n_components=...) -> KMeans (n_clusters=2)
     """
 
     def __init__(
-        self,
-        device: str = DEFAULT_DEVICE,
-        batch_size: int = DEFAULT_BATCH_SIZE
+            self,
+            device: str = DEFAULT_DEVICE,
+            batch_size: int = DEFAULT_BATCH_SIZE
     ):
         self.device = device
         self.batch_size = batch_size
@@ -46,11 +47,11 @@ class TeamClassifier:
 
     def extract_features(self, crops: list[np.ndarray]) -> np.ndarray:
         """
-        Конвертация списка кропов (OpenCV -> PIL) -> эмбеддинги.
+        Конвертация списка кропов (OpenCV -> PIL) -> эмбеддинги
         """
         pil_imgs = [sv.cv2_to_pillow(c) for c in crops]
         batches = [
-            pil_imgs[i : i + self.batch_size]
+            pil_imgs[i: i + self.batch_size]
             for i in range(0, len(pil_imgs), self.batch_size)
         ]
         feats = []
@@ -72,7 +73,7 @@ class TeamClassifier:
         """
         data = self.extract_features(crops)
         projections = self.reducer.fit_transform(data)
-        # сохраняем, иначе transform() упадет, ежели fit был на единственном sample
+        # сохраняем, иначе transform упадет, ежели fit был на единственном sample
         self.reducer._raw_data = data
         self.cluster_model.fit(projections)
 

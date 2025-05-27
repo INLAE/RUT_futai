@@ -1,16 +1,17 @@
 """
-Обёртка над YOLO для детекции мяча, игроков и судьи.
+Обертка над YOLO для детекции мяча, игроков и судьи
 """
 
 import numpy as np
 import supervision as sv
 from ultralytics import YOLO
 
-from .constants import DEFAULT_CONFIDENCE_THRESHOLD
+from src.futai.constants import DEFAULT_CONFIDENCE_THRESHOLD
+
 
 class PlayerDetectionModel:
     """
-    Класс-обёртка для YOLOv8.
+    Класс-обертка для YOLOv8.
     """
 
     def __init__(self, weights_path: str, device: str = None):
@@ -19,20 +20,20 @@ class PlayerDetectionModel:
             self.model.to(device)
 
     def infer(
-        self,
-        frame: np.ndarray,
-        confidence: float = DEFAULT_CONFIDENCE_THRESHOLD
+            self,
+            frame: np.ndarray,
+            confidence: float = DEFAULT_CONFIDENCE_THRESHOLD
     ) -> sv.Detections:
         """
         Запустить детекцию на одном кадре.
 
         Returns:
-            Detections — уже отфильтрованные по confidence.
+            Detections — уже отфильтрованные по уровню уверенности
         """
         result = self.model(frame)[0]
-        boxes     = result.boxes.xyxy.cpu().numpy()
+        boxes = result.boxes.xyxy.cpu().numpy()
         class_ids = result.boxes.cls.cpu().numpy().astype(int)
-        scores    = result.boxes.conf.cpu().numpy()
+        scores = result.boxes.conf.cpu().numpy()
 
         det = sv.Detections(
             xyxy=boxes,

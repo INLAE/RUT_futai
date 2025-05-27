@@ -5,7 +5,7 @@
 import supervision as sv
 from typing import Any, Dict
 
-from .constants import (
+from src.futai.constants import (
     COLOR_PALETTE_HEX,
     ELLIPSE_THICKNESS,
     TRIANGLE_BASE,
@@ -16,10 +16,10 @@ from .constants import (
 
 def build_annotators() -> Dict[str, Any]:
     """
-    Возвращает словарь из 3-х Annotator:
-      - ellipse     (игроки)
-      - label       (текст с tracker_id)
-      - triangle     (мяч)
+    Возвращает словарь из 3-х аннотаторов:
+      - в формае ellipse - игроки
+      - под надписью label - текст с tracker_id
+      - фигура triangle над мячом
     """
     palette = sv.ColorPalette.from_hex(COLOR_PALETTE_HEX)
 

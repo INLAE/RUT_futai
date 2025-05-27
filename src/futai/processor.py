@@ -5,18 +5,19 @@
 import supervision as sv
 import numpy as np
 
-from .detection      import PlayerDetectionModel
-from .classification import TeamClassifier
-from .tracking       import Tracker
-from .annotation     import build_annotators
-from .utils          import resolve_goalkeepers_team_id
-from .constants      import (
+from src.futai.detector.detection import PlayerDetectionModel
+from src.futai.handmodel.classification import TeamClassifier
+from src.futai.detector.tracking import Tracker
+from src.futai.detector.annotation import build_annotators
+from .constants import (
     BALL_CLASS_ID,
     GK_CLASS_ID,
     PLAYER_CLASS_ID,
     REFEREE_CLASS_ID,
-    DEFAULT_CONFIDENCE_THRESHOLD
+    DEFAULT_CONFIDENCE_THRESHOLD  # он тут дефолтный!! 0.3 !
 )
+from .detector import build_detector
+
 
 class TeamVideoProcessor:
     """
@@ -29,21 +30,22 @@ class TeamVideoProcessor:
     """
 
     def __init__(
-        self,
-        weights_path: str,
-        video_path: str,
-        device: str = None,
-        confidence: float = DEFAULT_CONFIDENCE_THRESHOLD
+            self,
+            weights_path: str,
+            video_path: str,
+            detector_type: str = "yolo",
+            device: str = None,
+            confidence: float = DEFAULT_CONFIDENCE_THRESHOLD
     ):
         # Детектор + трекер + классификатор
-        self.detector = PlayerDetectionModel(weights_path, device)
+        self.detector = build_detector(detector_type, weights_path, device)
         self.tracker = Tracker()
         self.team_clf = TeamClassifier(device=device)
         # Генератор фреймов
         self.frame_gen = sv.get_video_frames_generator(video_path)
         self.confidence = confidence
         # Мапа GK tracker_id -> команда (0/1)
-        self.gk_team_map : dict[int,int] = {}
+        self.gk_team_map: dict[int, int] = {}
         # Annotators
         self.annotators = build_annotators()
 
@@ -53,52 +55,44 @@ class TeamVideoProcessor:
           - детектим, трекаем, классифицируем, аннотируем.
         Возвращаем (оригинал, аннотированный).
         """
+        # берем кадр и детектимё
         frame = next(self.frame_gen)
 
-        # 1) Детекция
-        dets = self.detector.infer(frame, confidence=self.confidence)
+        # 1] Детекция
+        res = self.detector.infer(frame, confidence=self.confidence)[0]
+        dets = sv.Detections.from_ultralytics(res)
 
-        # 2) Отделить мяч и pad
-        ball = dets[dets.class_id == BALL_CLASS_ID]
-        ball.xyxy = sv.pad_boxes(ball.xyxy, px=10)
+        # 2] делим на мяч и остальных (остальных трекаем)
+        ball_det = dets[dets.class_id == BALL_CLASS_ID]
+        ball_det.xyxy = sv.pad_boxes(ball_det.xyxy, px=10)  # чуть-чуть расширяем
 
-        # 3) Трекинг остальных
-        others = dets[dets.class_id != BALL_CLASS_ID]
-        others = others.with_nms(threshold=0.5, class_agnostic=True)
-        others = self.tracker.update(others)
+        others = dets[dets.class_id != BALL_CLASS_ID]  # без мяча
+        others = others.with_nms(0.5, class_agnostic=True)  # NMS
+        others = self.tracker.update(others)  # ByteTrack
 
-        # 4) Разделить по классам
-        gk      = others[others.class_id == GK_CLASS_ID]
-        players = others[others.class_id == PLAYER_CLASS_ID]
-        refs    = others[others.class_id == REFEREE_CLASS_ID]
+        # 3] раскладываем остальных по  своим ролям
+        gk_det = others[others.class_id == GK_CLASS_ID]
+        player_det = others[others.class_id == PLAYER_CLASS_ID]
+        ref_det = others[others.class_id == REFEREE_CLASS_ID]
 
-        # 5) Классификация команд для игроков
-        crops = [sv.crop_image(frame, xy) for xy in players.xyxy]
-        players.class_id = self.team_clf.predict(crops)
+        # 4] классифицируем игроков по цвету формы (0 или 1)
+        crops = [sv.crop_image(frame, xy) for xy in player_det.xyxy]
+        player_det.class_id = self.team_clf.predict(crops)
 
-        # 6) Назначить GK один раз и зафризить цвет
-        for tid in gk.tracker_id:
-            if tid not in self.gk_team_map:
-                # вызывать утилиту по одному элементу
-                self.gk_team_map[tid] = int(
-                    resolve_goalkeepers_team_id(
-                        players, gk[gk.tracker_id == tid]
-                    )[0]
-                )
-            # присвоить ему запомненную команду
-            gk.class_id[gk.tracker_id == tid] = self.gk_team_map[tid]
+        # 5] назначаем вратарей в ту же команду, что и ближайший кластер
+        gk_det.class_id = GKRes.resolve(player_det, gk_det)
 
-        # 7) Сдвинуть referee ID в zero-based
-        refs.class_id -= 1
+        # 6] referee: делаем class_id - 0 - команда A; или 1 - команда B
+        ref_det.class_id -= 1  # было 3 -> станет 2 -> 1
 
-        # 8) Merge & Annotate
-        merged = sv.Detections.merge([players, gk, refs])
-        merged.class_id = merged.class_id.astype(int)
+        # 7] собираем всех вместе и рисуем
+        all_det = sv.Detections.merge([player_det, gk_det, ref_det])
+        all_det.class_id = all_det.class_id.astype(int)  # точно int32
 
-        ann = frame.copy()
-        ann = self.annotators['ellipse'].annotate(scene=ann, detections=merged)
-        labels = [f"#{tid}" for tid in merged.tracker_id]
-        ann = self.annotators['label'].annotate(scene=ann, detections=merged, labels=labels)
-        ann = self.annotators['triangle'].annotate(scene=ann, detections=ball)
+        annotated = frame.copy()
+        annotated = self.annotators["ellipse"].annotate(annotated, all_det)
+        labels = [f"#{tid}" for tid in all_det.tracker_id]
+        annotated = self.annotators["label"].annotate(annotated, all_det, labels)
+        annotated = self.annotators["triangle"].annotate(annotated, ball_det)
 
-        return frame, ann
+        return frame, annotated

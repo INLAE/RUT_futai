@@ -7,9 +7,10 @@ import supervision as sv
 
 from .constants import GK_CLASS_ID, PLAYER_CLASS_ID
 
+
 def resolve_goalkeepers_team_id(
-    players: sv.Detections,
-    goalkeepers: sv.Detections
+        players: sv.Detections,
+        goalkeepers: sv.Detections
 ) -> np.ndarray:
     """
     Простая эвристика: берём bottom-center игроков обеих команд,

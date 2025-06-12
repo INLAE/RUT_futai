@@ -11,8 +11,10 @@
 
 Библиотеки: **Ultralytics YOLOv8 + Supervision + SigLIP + UMAP + scikit-learn**.  
 
-<!-- кликабельная текстовая ссылка на скачивание -->
-[Демонстрация](./data/demo.mp4)
+### Демонстрация
+
+https://github.com/user-attachments/assets/0d39094a-43cf-4461-a738-c9a2e2093dfe
+
 
 <!-- встроенный плеер -->
 <!-- README.md -->

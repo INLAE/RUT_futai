@@ -10,7 +10,8 @@
 * два готовых видеофайла: *detect_out.mp4* (кадр + боксы) и *radars_out.mp4*.
 
 Библиотеки: **Ultralytics YOLOv8 + Supervision + SigLIP + UMAP + scikit-learn**.  
-Код разбит на небольшие, независимые модули (см. `src/futai/*`).
+
+[Демонстрация](/data/demo.mov)
 
 ## Пререквизиты
 > [!TIP]

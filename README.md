@@ -15,8 +15,8 @@
 [Демонстрация](./data/demo.mp4)
 
 <!-- встроенный плеер -->
-<video src="https://raw.githubusercontent.com/INLAE/RUT_futai/main/data/demo.mp4"
-       width="640" controls></video>
+<!-- README.md -->
+<video src="https://raw.githubusercontent.com/INLAE/RUT_futai/main/data/demo.mp4" width="640" controls></video>
 
        
 ## Пререквизиты

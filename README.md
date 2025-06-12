@@ -13,7 +13,7 @@
 
 [Демонстрация](/data/demo.mp4)
 
-<video src="https://raw.githubusercontent.com/INLAE/RUT_futai/main/data/demo.mp4" width="640" controls></video>
+<video src="https://github.com/INLAE/RUT_futai/blob/main/data/demo.mp4" width="640" controls></video>
        
 ## Пререквизиты
 > [!TIP]

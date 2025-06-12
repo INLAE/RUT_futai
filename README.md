@@ -11,7 +11,7 @@
 
 Библиотеки: **Ultralytics YOLOv8 + Supervision + SigLIP + UMAP + scikit-learn**.  
 
-[Демонстрация](/data/demo.mov)
+[Демонстрация](/data/demo.mp4)
 
 ## Пререквизиты
 > [!TIP]

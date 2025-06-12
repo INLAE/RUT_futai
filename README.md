@@ -13,6 +13,8 @@
 
 [Демонстрация](/data/demo.mp4)
 
+<video src="https://raw.githubusercontent.com/INLAE/RUT_futai/main/data/demo.mp4" width="640" controls></video>
+       
 ## Пререквизиты
 > [!TIP]
 > Перед применением сервиса, необходимо иметь веса обученной модели для детекции игроков и 32-х точек на поле. В данном репозитории ноутбуки с обучением этих моделей располагаются в директории `JupyterNotebooks`.  

@@ -45,13 +45,13 @@ src/futai
 ````
 ## 3. Использование
 ```python
-# Ячейка 1. Пути к данным
+# Ячейка 1. Библиотеки
 from pathlib import Path  # для работы с путями к файлам
 import cv2, numpy as np
 import supervision as sv  # надстройка-визуализатор для YOLO
 
-# Ячейка 2. Опиши свои пути на источники весов и видео
-VIDEO_IN = Path("/content/CSKA.mp4")  # исходный матч
+# Ячейка 2. Пути на источники весов и видео
+VIDEO_IN = Path("/content/Rotor.mp4")  # исходный матч
 PLAYER_WEIGHTS = Path("/content/weights/players.pt")  # веса YOLO для игроков
 FIELD_WEIGHTS = Path("/content/weights/field.pt")  # веса YOLO для линий поля
 

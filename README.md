@@ -11,10 +11,9 @@
 
 Библиотеки: **Ultralytics YOLOv8 + Supervision + SigLIP + UMAP + scikit-learn**.  
 
-## Демонстрация
+[Демонстрация](/data/demo.mp4)
 
-https://github.com/user-attachments/assets/b3b53dd2-7a01-4314-958c-5ed31c59d3a6
-
+<video src="https://raw.githubusercontent.com/INLAE/RUT_futai/main/data/demo.mp4" width="640" controls></video>
        
 ## Пререквизиты
 > [!TIP]
